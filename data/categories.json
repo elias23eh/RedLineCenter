@@ -1,0 +1,65 @@
+[
+  {
+    "id": "engine-system",
+    "name": "Engine System",
+    "description": "Intercoolers, oil coolers, catch tanks and more",
+    "icon": "Gauge",
+    "subcategories": ["Intercooler", "Oil Cooler", "Oil Catch Tank", "Engine Mounts", "Timing Components", "Valve Cover", "Radiator", "Water Pump", "Thermostat", "Head Gaskets", "Engine Sensors", "Breathers", "Dipstick", "Coolant", "Gaskets & Seals", "Rebuild Kits"]
+  },
+  {
+    "id": "exhaust-system",
+    "name": "Exhaust System",
+    "description": "Cat-back, headers, downpipes and manifolds",
+    "icon": "Wind",
+    "subcategories": ["Cat-Back Exhaust", "Headers", "Downpipe", "Exhaust Manifold", "Muffler", "Tips", "Heat Wrap", "Flex Pipe", "Test Pipe"]
+  },
+  {
+    "id": "fuel-system",
+    "name": "Fuel System",
+    "description": "Injectors, pumps, rails and regulators",
+    "icon": "Droplets",
+    "subcategories": ["Fuel Injectors", "Fuel Pump", "Fuel Rail", "Fuel Pressure Regulator", "Fuel Filter", "Surge Tank", "Nitrous System"]
+  },
+  {
+    "id": "intake-system",
+    "name": "Intake System",
+    "description": "Air intakes, filters, throttle bodies",
+    "icon": "Filter",
+    "subcategories": ["Cold Air Intake", "Short Ram Intake", "Air Filter", "Throttle Body", "Intake Manifold", "Velocity Stack", "MAF Sensor", "IAT Sensor", "Couplers", "Silicone Hoses"]
+  },
+  {
+    "id": "turbo-accessories",
+    "name": "Turbo Accessories",
+    "description": "Turbos, BOVs, wastegates and piping",
+    "icon": "Zap",
+    "subcategories": ["Turbocharger", "Blow Off Valve", "Wastegate", "Turbo Timer", "Boost Controller", "Boost Gauge", "Oil Feed Line", "Oil Return Line", "Turbo Blanket"]
+  },
+  {
+    "id": "suspension",
+    "name": "Suspension",
+    "description": "Coilovers, sway bars, camber kits",
+    "icon": "Car",
+    "subcategories": ["Coilovers", "Lowering Springs", "Sway Bar", "Camber Kit", "Control Arms", "Tie Rods", "Wheel Spacers", "Strut Brace"]
+  },
+  {
+    "id": "interior",
+    "name": "Interior",
+    "description": "Gauges, seats, steering wheels",
+    "icon": "LayoutDashboard",
+    "subcategories": ["Racing Seats", "Steering Wheel", "Shift Knob", "Gauge Cluster", "Roll Cage", "Harness", "Pedals", "Floor Mats"]
+  },
+  {
+    "id": "exterior",
+    "name": "Exterior",
+    "description": "Body kits, splitters, hood vents",
+    "icon": "Box",
+    "subcategories": ["Body Kit"]
+  },
+  {
+    "id": "accessories",
+    "name": "Accessories & Apparel",
+    "description": "T-shirts, caps, keychains and more",
+    "icon": "ShoppingBag",
+    "subcategories": ["T-Shirts", "Shoes", "Keychains", "Caps", "Wallets"]
+  }
+]
