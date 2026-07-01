@@ -4,6 +4,8 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
+import { AuthProvider } from "@/lib/supabase/AuthProvider";
+import { CartProvider } from "@/lib/supabase/CartProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -40,10 +42,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${barlowCondensed.variable} ${spaceMono.variable}`}>
       <body className="min-h-screen flex flex-col" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
-        <LoadingScreen />
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <AuthProvider>
+          <CartProvider>
+            <LoadingScreen />
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

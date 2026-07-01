@@ -1,27 +1,64 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import { ArrowRight, MessageCircle, Phone, Mail, MapPin, CheckCircle } from "lucide-react";
-import categories from "@/data/categories.json";
-import products from "@/data/products.json";
+import { ArrowRight, MessageCircle, Phone, Mail, MapPin, CheckCircle, ShoppingCart } from "lucide-react";
+import { fetchProducts, fetchCategories, WebsiteProduct, WebsiteCategory } from "@/lib/supabase/queries";
+import { useCart } from "@/lib/supabase/CartProvider";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 import HeroCar from "@/components/HeroCar";
 import GaugeStat from "@/components/GaugeStat";
 import RevealSection from "@/components/RevealSection";
 import HKSScrollSection from "@/components/HKSScrollSection";
 import ManifoldScrollSection from "@/components/ManifoldScrollSection";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
-
-const featured = products.filter(p => p.featured).slice(0, 4);
 
 export default function Home() {
   const heroRef = useRef<HTMLElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+  const { addToCart } = useCart();
+
+  function handleAddToCart(productId: string) {
+    if (!user) { router.push("/login"); return; }
+    addToCart(productId);
+  }
+  const [products, setProducts] = useState<WebsiteProduct[]>([]);
+  const [categories, setCategories] = useState<WebsiteCategory[]>([]);
+
+  useEffect(() => {
+    fetchProducts().then(setProducts);
+    fetchCategories().then(setCategories);
+  }, []);
+
+  const featured = products.filter(p => p.featured).slice(0, 4);
+
+  useGSAP(() => {
+    ScrollTrigger.batch(".cat-cell", {
+      onEnter: els => gsap.fromTo(els,
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: "power2.out" }
+      ),
+      start: "top 88%",
+      once: true,
+    });
+    ScrollTrigger.batch(".product-card", {
+      onEnter: els => gsap.fromTo(els,
+        { y: 50, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: "expo.out" }
+      ),
+      start: "top 88%",
+      once: true,
+    });
+  }, { scope: pageRef, dependencies: [categories, products] });
 
   useGSAP(() => {
     // ── HERO: entrance animations ──────────────────────────────────────
@@ -64,32 +101,12 @@ export default function Home() {
     // Bottom HUD ticker
     tl.from(".hud-ticker span", { opacity: 0, stagger: 0.08, duration: 0.4 }, 1.0);
 
-    // ── CATEGORIES: scroll stagger ─────────────────────────────────────
-    ScrollTrigger.batch(".cat-cell", {
-      onEnter: els => gsap.fromTo(els,
-        { y: 40, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, stagger: 0.06, ease: "power2.out" }
-      ),
-      start: "top 88%",
-      once: true,
-    });
-
     // Section headers
     gsap.utils.toArray<HTMLElement>(".section-header").forEach(el => {
       gsap.from(el, {
         x: -30, opacity: 0, duration: 0.7, ease: "power3.out",
         scrollTrigger: { trigger: el, start: "top 88%", once: true },
       });
-    });
-
-    // ── FEATURED PRODUCTS: stagger up ─────────────────────────────────
-    ScrollTrigger.batch(".product-card", {
-      onEnter: els => gsap.fromTo(els,
-        { y: 50, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: "expo.out" }
-      ),
-      start: "top 88%",
-      once: true,
     });
 
     // ── ABOUT: bars fill on scroll ─────────────────────────────────────
@@ -394,27 +411,60 @@ export default function Home() {
                       <div style={{ fontFamily: "var(--mono)", fontSize: "0.55rem", color: "var(--text-dim)", marginBottom: "0.15rem" }}>PRICE_USD</div>
                       <div style={{ fontFamily: "var(--mono)", fontSize: "1.2rem", fontWeight: 900, color: "var(--red)" }}>${p.price}</div>
                     </div>
-                    <a
-                      href={`https://wa.me/96170155599?text=Hi, I'm interested in the ${encodeURIComponent(p.name)}`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{
-                        fontFamily: "var(--mono)", fontSize: "0.62rem", letterSpacing: "2px",
-                        color: "var(--bg)", backgroundColor: "var(--red)",
-                        padding: "0.5rem 1rem", textDecoration: "none",
-                        clipPath: "polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)",
-                        transition: "background 0.2s",
-                      }}
-                      onClick={e => {
-                        gsap.fromTo(e.currentTarget, { scale: 0.93 }, { scale: 1, duration: 0.3, ease: "back.out(2)" });
-                      }}
-                    >
-                      INQUIRE
-                    </a>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button
+                        onClick={e => {
+                          handleAddToCart(p.id);
+                          gsap.fromTo(e.currentTarget, { scale: 0.93 }, { scale: 1, duration: 0.3, ease: "back.out(2)" });
+                        }}
+                        disabled={!p.inStock}
+                        style={{
+                          fontFamily: "var(--mono)", fontSize: "0.62rem", letterSpacing: "2px",
+                          color: "var(--bg)", backgroundColor: p.inStock ? "var(--red)" : "var(--border)",
+                          padding: "0.5rem 1rem", border: "none", cursor: p.inStock ? "pointer" : "not-allowed",
+                          clipPath: "polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)",
+                          transition: "background 0.2s",
+                          display: "flex", alignItems: "center", gap: "0.4rem",
+                        }}
+                      >
+                        <ShoppingCart size={12} /> CART
+                      </button>
+                      <a
+                        href={`https://wa.me/96170155599?text=Hi, I'm interested in the ${encodeURIComponent(p.name)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{
+                          fontFamily: "var(--mono)", fontSize: "0.62rem", letterSpacing: "2px",
+                          color: "var(--text)", backgroundColor: "transparent",
+                          padding: "0.5rem 0.75rem", textDecoration: "none",
+                          border: "1px solid var(--border-bright)",
+                        }}
+                      >
+                        ASK
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════ BEFORE / AFTER ══ */}
+      <section className="mobile-section" style={{ padding: "6rem 1.5rem", borderTop: "1px solid var(--border)", backgroundColor: "var(--bg-panel)" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+          <div className="section-header" style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "3rem" }}>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "3px", color: "var(--text-dim)" }}>/04</div>
+            <div style={{ width: 1, height: 32, background: "var(--border-bright)" }} />
+            <div>
+              <div className="section-tag" style={{ marginBottom: "0.3rem" }}>// THE_TRANSFORMATION</div>
+              <h2 style={{ fontSize: "clamp(2rem, 3.5vw, 2.8rem)", fontWeight: 800, letterSpacing: "0px", fontFamily: "var(--heading)" }}>See The Difference</h2>
+            </div>
+          </div>
+          <p style={{ fontFamily: "var(--mono)", fontSize: "0.72rem", color: "var(--text-muted)", letterSpacing: "0.5px", marginBottom: "2rem", maxWidth: 560 }}>
+            {">"} Drag the slider. Same car, same garage — one runs stock parts, the other runs ours.
+          </p>
+          <BeforeAfterSlider beforeSrc="/build-compare/stock.jpg" afterSrc="/build-compare/modded.jpg" />
         </div>
       </section>
 
@@ -426,7 +476,7 @@ export default function Home() {
         <RevealSection>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className="section-header" style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "4rem" }}>
-            <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "3px", color: "var(--text-dim)" }}>/04</div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "3px", color: "var(--text-dim)" }}>/05</div>
             <div style={{ width: 1, height: 32, background: "var(--border-bright)" }} />
             <div>
               <div className="section-tag" style={{ marginBottom: "0.3rem" }}>// ABOUT_UNIT</div>
@@ -571,7 +621,7 @@ export default function Home() {
         <RevealSection>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className="section-header" style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "3rem" }}>
-            <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "3px", color: "var(--text-dim)" }}>/05</div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "3px", color: "var(--text-dim)" }}>/06</div>
             <div style={{ width: 1, height: 32, background: "var(--border-bright)" }} />
             <div>
               <div className="section-tag" style={{ marginBottom: "0.3rem" }}>// COMMS_LINK</div>

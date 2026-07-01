@@ -1,28 +1,20 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Search, MessageCircle, X, ArrowRight, ChevronRight } from "lucide-react";
+import { Search, MessageCircle, ShoppingCart, X, ArrowRight, ChevronRight } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
-import productsData from "@/data/products.json";
-import categoriesData from "@/data/categories.json";
 import { Suspense } from "react";
+import { fetchProducts, fetchCategories, WebsiteProduct, WebsiteCategory } from "@/lib/supabase/queries";
+import { useCart } from "@/lib/supabase/CartProvider";
+import { useAuth } from "@/lib/supabase/AuthProvider";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
-const CATS = [
-  { id: "all", name: "ALL PARTS", count: productsData.length },
-  ...categoriesData.map((c) => ({
-    id: c.id,
-    name: c.name.toUpperCase(),
-    count: productsData.filter((p) => p.category === c.id).length,
-  })).filter((c) => c.count > 0),
-];
-
-function ProductCard({ product, index }: { product: (typeof productsData)[0]; index: number }) {
+function ProductCard({ product, index, onAdd }: { product: WebsiteProduct; index: number; onAdd: (id: string) => void }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const arcRef = useRef<SVGPathElement>(null);
 
@@ -112,24 +104,36 @@ function ProductCard({ product, index }: { product: (typeof productsData)[0]; in
             <div style={{ fontFamily: "var(--mono)", fontSize: "0.48rem", color: "var(--text-dim)", marginBottom: "0.1rem" }}>PRICE_USD</div>
             <div style={{ fontFamily: "var(--mono)", fontSize: "1.1rem", fontWeight: 900, color: "var(--red)", lineHeight: 1 }}>${product.price}</div>
           </div>
-          <a
-            href={`https://wa.me/96170155599?text=Hi%2C%20I%27m%20interested%20in%20the%20${encodeURIComponent(product.name)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
-              color: "var(--bg)", backgroundColor: "var(--red)",
-              padding: "0.4rem 0.75rem", textDecoration: "none",
-              display: "flex", alignItems: "center", gap: "0.3rem",
-              clipPath: "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)",
-              transition: "background 0.15s",
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--red-dark)")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "var(--red)")}
-          >
-            <MessageCircle size={11} /> ASK
-          </a>
+          <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+            <button
+              onClick={() => onAdd(product.id)}
+              disabled={!product.inStock}
+              style={{
+                fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
+                color: "var(--bg)", backgroundColor: product.inStock ? "var(--red)" : "var(--border)",
+                padding: "0.4rem 0.65rem", border: "none", cursor: product.inStock ? "pointer" : "not-allowed",
+                display: "flex", alignItems: "center", gap: "0.3rem",
+                clipPath: "polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)",
+                transition: "background 0.15s",
+              }}
+            >
+              <ShoppingCart size={11} />
+            </button>
+            <a
+              href={`https://wa.me/96170155599?text=Hi%2C%20I%27m%20interested%20in%20the%20${encodeURIComponent(product.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
+                color: "var(--text)", backgroundColor: "transparent",
+                padding: "0.4rem 0.65rem", textDecoration: "none",
+                display: "flex", alignItems: "center",
+                border: "1px solid var(--border-bright)",
+              }}
+            >
+              <MessageCircle size={11} />
+            </a>
+          </div>
         </div>
       </div>
 
@@ -155,30 +159,54 @@ function ProductCard({ product, index }: { product: (typeof productsData)[0]; in
 
 function ProductsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialCategory = searchParams.get("category") || "all";
+  const { user } = useAuth();
+  const { addToCart } = useCart();
 
+  const [products, setProducts] = useState<WebsiteProduct[]>([]);
+  const [categories, setCategories] = useState<WebsiteCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [search, setSearch] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    fetchProducts().then(setProducts);
+    fetchCategories().then(setCategories);
+  }, []);
+
+  function handleAdd(productId: string) {
+    if (!user) { router.push("/login"); return; }
+    addToCart(productId);
+  }
+
+  const CATS = useMemo(() => [
+    { id: "all", name: "ALL PARTS", count: products.length },
+    ...categories.map((c) => ({
+      id: c.id,
+      name: c.name.toUpperCase(),
+      count: products.filter((p) => p.category === c.id).length,
+    })).filter((c) => c.count > 0),
+  ], [products, categories]);
+
   const filtered = useMemo(() => {
-    return productsData.filter((p) => {
+    return products.filter((p) => {
       const matchCat = selectedCategory === "all" || p.category === selectedCategory;
       const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [selectedCategory, search]);
+  }, [products, selectedCategory, search]);
 
   // Group products by category when showing all
   const grouped = useMemo(() => {
     if (selectedCategory !== "all" || search) return null;
     return CATS.filter((c) => c.id !== "all").map((cat) => ({
       cat,
-      products: productsData.filter((p) => p.category === cat.id),
+      products: products.filter((p) => p.category === cat.id),
     })).filter((g) => g.products.length > 0);
-  }, [selectedCategory, search]);
+  }, [products, CATS, selectedCategory, search]);
 
   const animateCards = useCallback(() => {
     if (!gridRef.current) return;
@@ -216,7 +244,7 @@ function ProductsContent() {
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
             <div className="pulse-dot" />
             <span style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", letterSpacing: "3px", color: "var(--red)" }}>// PARTS_CATALOG</span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", color: "var(--text-dim)", letterSpacing: "2px" }}>— {productsData.length} UNITS INDEXED</span>
+            <span style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", color: "var(--text-dim)", letterSpacing: "2px" }}>— {products.length} UNITS INDEXED</span>
           </div>
 
           <h1 style={{ fontFamily: "var(--heading)", fontSize: "clamp(2.5rem, 6vw, 5rem)", fontWeight: 900, lineHeight: 0.9, letterSpacing: "-1px", marginBottom: "1.5rem" }}>
@@ -328,7 +356,7 @@ function ProductsContent() {
                 {/* Show first 8 products in this category */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1px", border: "1px solid var(--border)", backgroundColor: "var(--border)" }}>
                   {group.products.slice(0, 8).map((p, i) => (
-                    <ProductCard key={p.id} product={p} index={i} />
+                    <ProductCard key={p.id} product={p} index={i} onAdd={handleAdd} />
                   ))}
                 </div>
 
@@ -364,7 +392,7 @@ function ProductsContent() {
           ) : (
             <div ref={gridRef} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1px", border: "1px solid var(--border)", backgroundColor: "var(--border)" }}>
               {filtered.map((p, i) => (
-                <ProductCard key={p.id} product={p} index={i} />
+                <ProductCard key={p.id} product={p} index={i} onAdd={handleAdd} />
               ))}
             </div>
           )

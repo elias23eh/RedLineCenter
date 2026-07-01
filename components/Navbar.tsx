@@ -3,9 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LogOut } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import { useAuth } from "@/lib/supabase/AuthProvider";
+import { useCart } from "@/lib/supabase/CartProvider";
+import { createClient } from "@/lib/supabase/client";
 
 gsap.registerPlugin(useGSAP);
 
@@ -21,6 +24,13 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [time, setTime] = useState("");
   const navRef = useRef<HTMLElement>(null);
+  const { user } = useAuth();
+  const { count } = useCart();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+  }
 
   useGSAP(() => {
     if (!navRef.current) return;
@@ -121,6 +131,30 @@ export default function Navbar() {
           {/* Divider */}
           <div style={{ width: 1, height: 20, background: "var(--border-bright)" }} className="nav-clock" />
 
+          {/* Cart */}
+          <Link href="/cart" style={{ position: "relative", display: "flex", color: "var(--text-muted)" }}>
+            <ShoppingCart size={18} />
+            {count > 0 && (
+              <span style={{
+                position: "absolute", top: -6, right: -8,
+                backgroundColor: "var(--red)", color: "var(--bg)",
+                fontFamily: "var(--mono)", fontSize: "0.55rem", fontWeight: 700,
+                width: 15, height: 15, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>{count}</span>
+            )}
+          </Link>
+
+          {/* Account */}
+          {user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <Link href="/orders" style={{ color: "var(--text-muted)", display: "flex" }}><User size={18} /></Link>
+              <button onClick={handleSignOut} style={{ background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex" }}><LogOut size={16} /></button>
+            </div>
+          ) : (
+            <Link href="/login" style={{ color: "var(--text-muted)", display: "flex" }}><User size={18} /></Link>
+          )}
+
           {/* WhatsApp CTA */}
           <a
             href="https://wa.me/96170155599"
@@ -209,6 +243,42 @@ export default function Navbar() {
             </span>
           </Link>
         ))}
+
+        <Link href="/cart" onClick={() => setOpen(false)} style={{
+          fontFamily: "var(--heading)", fontSize: "2rem", fontWeight: 800, letterSpacing: "1px",
+          color: "var(--text)", textDecoration: "none",
+          padding: "0.9rem 0", borderBottom: "1px solid #1a1a1a",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          CART{count > 0 ? ` (${count})` : ""}
+        </Link>
+
+        {user ? (
+          <>
+            <Link href="/orders" onClick={() => setOpen(false)} style={{
+              fontFamily: "var(--heading)", fontSize: "2rem", fontWeight: 800, letterSpacing: "1px",
+              color: "var(--text)", textDecoration: "none",
+              padding: "0.9rem 0", borderBottom: "1px solid #1a1a1a",
+            }}>
+              MY ORDERS
+            </Link>
+            <button onClick={() => { handleSignOut(); setOpen(false); }} style={{
+              fontFamily: "var(--heading)", fontSize: "2rem", fontWeight: 800, letterSpacing: "1px",
+              color: "var(--text-dim)", background: "none", border: "none", textAlign: "left",
+              padding: "0.9rem 0", cursor: "pointer",
+            }}>
+              SIGN OUT
+            </button>
+          </>
+        ) : (
+          <Link href="/login" onClick={() => setOpen(false)} style={{
+            fontFamily: "var(--heading)", fontSize: "2rem", fontWeight: 800, letterSpacing: "1px",
+            color: "var(--text)", textDecoration: "none",
+            padding: "0.9rem 0", borderBottom: "1px solid #1a1a1a",
+          }}>
+            SIGN IN
+          </Link>
+        )}
 
         <div style={{ marginTop: "auto", paddingTop: "2rem" }}>
           <div style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", color: "var(--text-dim)", letterSpacing: "2px", marginBottom: "0.5rem" }}>TEL</div>
