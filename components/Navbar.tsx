@@ -3,11 +3,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, ShoppingCart, User, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LogOut, Car } from "lucide-react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useAuth } from "@/lib/supabase/AuthProvider";
 import { useCart } from "@/lib/supabase/CartProvider";
+import { useGarage } from "@/lib/garage/GarageProvider";
+import { carLabel } from "@/lib/garage/matching";
 import { createClient } from "@/lib/supabase/client";
 
 gsap.registerPlugin(useGSAP);
@@ -26,6 +28,7 @@ export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
   const { user } = useAuth();
   const { count } = useCart();
+  const { activeCar, openGarage } = useGarage();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -131,6 +134,26 @@ export default function Navbar() {
           {/* Divider */}
           <div style={{ width: 1, height: 20, background: "var(--border-bright)" }} className="nav-clock" />
 
+          {/* Garage */}
+          <button
+            onClick={openGarage}
+            className="nav-garage-btn"
+            style={{
+              fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
+              color: activeCar ? "var(--red)" : "var(--text-muted)",
+              backgroundColor: activeCar ? "rgba(227,28,28,0.07)" : "transparent",
+              border: `1px solid ${activeCar ? "rgba(227,28,28,0.35)" : "var(--border-bright)"}`,
+              padding: "0.35rem 0.6rem", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "0.4rem",
+              transition: "all 0.15s", whiteSpace: "nowrap",
+            }}
+          >
+            <Car size={14} />
+            <span className="nav-garage-label">
+              {activeCar ? carLabel(activeCar).toUpperCase() : "GARAGE"}
+            </span>
+          </button>
+
           {/* Cart */}
           <Link href="/cart" style={{ position: "relative", display: "flex", color: "var(--text-muted)" }}>
             <ShoppingCart size={18} />
@@ -199,6 +222,7 @@ export default function Navbar() {
         }
         @media (max-width: 640px) {
           .nav-wa-text { display: none !important; }
+          .nav-garage-label { display: none !important; }
           .nav-wa-btn  {
             padding: 0.4rem 0.55rem !important;
             clip-path: none !important;
@@ -243,6 +267,20 @@ export default function Navbar() {
             </span>
           </Link>
         ))}
+
+        <button onClick={() => { openGarage(); setOpen(false); }} style={{
+          fontFamily: "var(--heading)", fontSize: "2rem", fontWeight: 800, letterSpacing: "1px",
+          color: "var(--text)", background: "none", border: "none", textAlign: "left",
+          padding: "0.9rem 0", borderBottom: "1px solid #1a1a1a", cursor: "pointer",
+          display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%",
+        }}>
+          MY GARAGE
+          {activeCar && (
+            <span style={{ fontFamily: "var(--mono)", fontSize: "0.6rem", color: "var(--red)", letterSpacing: "2px" }}>
+              {carLabel(activeCar).toUpperCase()}
+            </span>
+          )}
+        </button>
 
         <Link href="/cart" onClick={() => setOpen(false)} style={{
           fontFamily: "var(--heading)", fontSize: "2rem", fontWeight: 800, letterSpacing: "1px",

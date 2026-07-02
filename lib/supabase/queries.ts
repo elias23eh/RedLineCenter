@@ -9,6 +9,7 @@ export interface WebsiteProduct {
   image: string | null;
   featured: boolean;
   inStock: boolean;
+  compatibleCars: string[];
 }
 
 export interface WebsiteCategory {
@@ -22,7 +23,7 @@ export async function fetchProducts(): Promise<WebsiteProduct[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, category, price, description, image, featured, in_stock")
+    .select("id, name, category, price, description, image, featured, in_stock, compatible_cars")
     .order("name");
   if (error || !data) return [];
   return data.map(p => ({
@@ -34,6 +35,7 @@ export async function fetchProducts(): Promise<WebsiteProduct[]> {
     image: p.image,
     featured: p.featured,
     inStock: p.in_stock,
+    compatibleCars: p.compatible_cars ?? [],
   }));
 }
 

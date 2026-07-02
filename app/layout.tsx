@@ -6,6 +6,8 @@ import Footer from "@/components/Footer";
 import LoadingScreen from "@/components/LoadingScreen";
 import { AuthProvider } from "@/lib/supabase/AuthProvider";
 import { CartProvider } from "@/lib/supabase/CartProvider";
+import { GarageProvider } from "@/lib/garage/GarageProvider";
+import GarageSelector from "@/components/GarageSelector";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -44,10 +46,13 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col" style={{ backgroundColor: "var(--bg)", color: "var(--text)" }}>
         <AuthProvider>
           <CartProvider>
-            <LoadingScreen />
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            <GarageProvider>
+              <LoadingScreen />
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <GarageSelector />
+            </GarageProvider>
           </CartProvider>
         </AuthProvider>
       </body>

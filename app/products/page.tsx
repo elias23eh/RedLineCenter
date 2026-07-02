@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Search, MessageCircle, ShoppingCart, X, ArrowRight, ChevronRight } from "lucide-react";
+import { Search, MessageCircle, ShoppingCart, X, ArrowRight, ChevronRight, Car } from "lucide-react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -11,12 +11,16 @@ import { Suspense } from "react";
 import { fetchProducts, fetchCategories, WebsiteProduct, WebsiteCategory } from "@/lib/supabase/queries";
 import { useCart } from "@/lib/supabase/CartProvider";
 import { useAuth } from "@/lib/supabase/AuthProvider";
+import { useGarage } from "@/lib/garage/GarageProvider";
+import { getFitmentStatus, carLabel } from "@/lib/garage/matching";
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 function ProductCard({ product, index, onAdd }: { product: WebsiteProduct; index: number; onAdd: (id: string) => void }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const arcRef = useRef<SVGPathElement>(null);
+  const { activeCar } = useGarage();
+  const fitment = activeCar ? getFitmentStatus(product.compatibleCars, activeCar) : "na";
 
   function onEnter() {
     if (cardRef.current) gsap.to(cardRef.current, { borderColor: "rgba(227,28,28,0.45)", boxShadow: "0 0 24px rgba(227,28,28,0.07), inset 0 0 24px rgba(227,28,28,0.03)", duration: 0.2 });
@@ -71,6 +75,21 @@ function ProductCard({ product, index, onAdd }: { product: WebsiteProduct; index
         )}
         {/* bottom gradient */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 40, background: "linear-gradient(transparent, #0d0d0d)", pointerEvents: "none" }} />
+        {/* fitment badge */}
+        {fitment !== "na" && (
+          <div style={{
+            position: "absolute", bottom: 8, left: 10,
+            fontFamily: "var(--mono)", fontSize: "0.5rem", letterSpacing: "1px",
+            padding: "0.15rem 0.4rem",
+            display: "flex", alignItems: "center", gap: "0.3rem",
+            backgroundColor: fitment === "confirmed" ? "rgba(22,163,74,0.12)" : fitment === "universal" ? "rgba(150,150,150,0.1)" : "rgba(227,28,28,0.08)",
+            border: `1px solid ${fitment === "confirmed" ? "rgba(22,163,74,0.35)" : fitment === "universal" ? "var(--border-bright)" : "rgba(227,28,28,0.25)"}`,
+            color: fitment === "confirmed" ? "#16a34a" : fitment === "universal" ? "var(--text-muted)" : "rgba(227,28,28,0.7)",
+          }}>
+            <Car size={9} />
+            {fitment === "confirmed" ? "FITS_YOUR_CAR" : fitment === "universal" ? "UNIVERSAL" : "NO_FIT"}
+          </div>
+        )}
         {/* unit number */}
         <div style={{ position: "absolute", top: 8, left: 10, fontFamily: "var(--mono)", fontSize: "0.52rem", color: "var(--text-dim)", letterSpacing: "2px" }}>
           #{String(index + 1).padStart(3, "0")}
@@ -163,19 +182,30 @@ function ProductsContent() {
   const initialCategory = searchParams.get("category") || "all";
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const { activeCar, openGarage } = useGarage();
 
-  const [products, setProducts] = useState<WebsiteProduct[]>([]);
+  const [allProducts, setAllProducts] = useState<WebsiteProduct[]>([]);
   const [categories, setCategories] = useState<WebsiteCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [search, setSearch] = useState("");
+  const [garageOnly, setGarageOnly] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchProducts().then(setProducts);
+    fetchProducts().then(setAllProducts);
     fetchCategories().then(setCategories);
   }, []);
+
+  // Garage filter applies before category/search so tab counts stay honest
+  const products = useMemo(() => {
+    if (!garageOnly || !activeCar) return allProducts;
+    return allProducts.filter(p => {
+      const s = getFitmentStatus(p.compatibleCars, activeCar);
+      return s === "confirmed" || s === "universal";
+    });
+  }, [allProducts, garageOnly, activeCar]);
 
   function handleAdd(productId: string) {
     if (!user) { router.push("/login"); return; }
@@ -278,6 +308,57 @@ function ProductsContent() {
             {search && (
               <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-dim)", cursor: "pointer", display: "flex" }}>
                 <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Garage fitment controls */}
+          <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            {activeCar ? (
+              <>
+                <button
+                  onClick={openGarage}
+                  style={{
+                    fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
+                    color: "var(--red)", backgroundColor: "rgba(227,28,28,0.07)",
+                    border: "1px solid rgba(227,28,28,0.35)", padding: "0.45rem 0.8rem",
+                    cursor: "pointer", display: "flex", alignItems: "center", gap: "0.45rem",
+                  }}
+                >
+                  <Car size={12} />
+                  {activeCar.make.toUpperCase()} {carLabel(activeCar).toUpperCase()}
+                </button>
+                <button
+                  onClick={() => setGarageOnly(!garageOnly)}
+                  style={{
+                    fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
+                    color: garageOnly ? "var(--bg)" : "var(--text-muted)",
+                    backgroundColor: garageOnly ? "var(--red)" : "transparent",
+                    border: `1px solid ${garageOnly ? "var(--red)" : "var(--border-bright)"}`,
+                    padding: "0.45rem 0.8rem", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: "0.45rem",
+                    transition: "all 0.15s",
+                    clipPath: garageOnly ? "polygon(5px 0%, 100% 0%, calc(100% - 5px) 100%, 0% 100%)" : "none",
+                  }}
+                >
+                  {garageOnly ? "✓ FITS MY CAR" : "SHOW ONLY MY CAR"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={openGarage}
+                style={{
+                  fontFamily: "var(--mono)", fontSize: "0.58rem", letterSpacing: "1.5px",
+                  color: "var(--text-muted)", backgroundColor: "transparent",
+                  border: "1px dashed var(--border-bright)", padding: "0.45rem 0.8rem",
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: "0.45rem",
+                  transition: "color 0.15s, border-color 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--red)"; e.currentTarget.style.borderColor = "rgba(227,28,28,0.4)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "var(--border-bright)"; }}
+              >
+                <Car size={12} />
+                + SELECT YOUR CAR — FILTER PARTS THAT FIT
               </button>
             )}
           </div>
