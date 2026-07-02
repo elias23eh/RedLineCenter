@@ -153,6 +153,19 @@ export default function Home() {
       {/* ═══════════════════════════════════════ HERO ══ */}
       <section id="hero-section" ref={heroRef} style={{ minHeight: "100vh", position: "relative", display: "flex", alignItems: "center", paddingTop: "calc(60px + env(safe-area-inset-top, 0px) + 8px)", overflow: "hidden" }} className="hud-grid scanlines">
 
+        {/* Ambient garage/dyno background photo */}
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          backgroundImage: "url(/hero-bg.png)",
+          backgroundSize: "cover",
+          backgroundPosition: "center 35%",
+          opacity: 0.5,
+        }} />
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 0,
+          background: "linear-gradient(to right, var(--bg) 0%, rgba(8,8,8,0.75) 40%, rgba(8,8,8,0.4) 100%), linear-gradient(to top, var(--bg) 0%, transparent 25%)",
+        }} />
+
         <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%,-50%)", width: 800, height: 800, background: "radial-gradient(circle, rgba(227,28,28,0.07) 0%, transparent 65%)", pointerEvents: "none" }} />
 
         {/* HUD top bar */}
@@ -320,7 +333,10 @@ export default function Home() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1px", border: "1px solid var(--border)", backgroundColor: "var(--border)" }}>
-            {categories.map((cat, i) => (
+            {categories.map((cat, i) => {
+              const maxTypes = Math.max(...categories.map(c => c.subcategories.length), 1);
+              const typePct = Math.round((cat.subcategories.length / maxTypes) * 100);
+              return (
               <Link key={cat.id} href={`/products?category=${cat.id}`} className="cat-cell hud-card" style={{
                 display: "block", padding: "1.5rem",
                 backgroundColor: "var(--bg-panel)", textDecoration: "none",
@@ -328,23 +344,88 @@ export default function Home() {
                 border: "1px solid var(--border)",
                 opacity: 0,
               }}
-                onMouseEnter={e => gsap.to(e.currentTarget, { y: -4, duration: 0.25, ease: "power2.out" })}
-                onMouseLeave={e => gsap.to(e.currentTarget, { y: 0, duration: 0.25, ease: "power2.out" })}
+                onMouseEnter={e => {
+                  const el = e.currentTarget;
+                  gsap.to(el, { y: -4, duration: 0.25, ease: "power2.out" });
+                  gsap.to(el.querySelector(".cat-cell-bg"), { opacity: 0.35, scale: 1.04, duration: 0.4, ease: "power2.out" });
+                  gsap.to(el.querySelectorAll(".cat-bracket"), { opacity: 1, duration: 0.25, stagger: 0.03 });
+                  gsap.to(el.querySelector(".cat-accent"), { scaleX: 1, duration: 0.3, ease: "power2.out" });
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget;
+                  gsap.to(el, { y: 0, duration: 0.25, ease: "power2.out" });
+                  gsap.to(el.querySelector(".cat-cell-bg"), { opacity: 0.12, scale: 1, duration: 0.4, ease: "power2.out" });
+                  gsap.to(el.querySelectorAll(".cat-bracket"), { opacity: 0, duration: 0.2 });
+                  gsap.to(el.querySelector(".cat-accent"), { scaleX: 0, duration: 0.25, ease: "power2.in" });
+                }}
               >
-                <div style={{ fontFamily: "var(--mono)", fontSize: "0.55rem", color: "var(--text-dim)", letterSpacing: "2px", marginBottom: "1rem" }}>
+                {/* Background category photo */}
+                <div className="cat-cell-bg" style={{
+                  position: "absolute", inset: 0,
+                  backgroundImage: `url(/categories/${cat.id}.png)`,
+                  backgroundSize: "cover", backgroundPosition: "center",
+                  opacity: 0.12, transition: "none",
+                }} />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, var(--bg-panel) 0%, rgba(13,13,13,0.85) 35%, var(--bg-panel) 100%)" }} />
+
+                {/* Ghost index number */}
+                <div style={{
+                  position: "absolute", top: -8, right: -6,
+                  fontFamily: "var(--heading)", fontSize: "4.5rem", fontWeight: 900, lineHeight: 1,
+                  color: "transparent", WebkitTextStroke: "1px rgba(227,28,28,0.15)",
+                  pointerEvents: "none",
+                }}>
                   {String(i + 1).padStart(2, "0")}
                 </div>
-                <h3 style={{ fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.5px", marginBottom: "0.4rem", color: "var(--text)" }}>{cat.name}</h3>
-                <p style={{ fontFamily: "var(--mono)", fontSize: "0.65rem", color: "var(--text-dim)", lineHeight: 1.6, marginBottom: "1rem" }}>{cat.description}</p>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", color: "var(--red)", letterSpacing: "1px" }}>{cat.subcategories.length} TYPES</span>
-                  <ArrowRight size={12} color="var(--text-dim)" />
+
+                {/* HUD corner brackets */}
+                <div className="cat-bracket" style={{ position: "absolute", top: 6, left: 6, width: 12, height: 12, borderTop: "2px solid var(--red)", borderLeft: "2px solid var(--red)", opacity: 0 }} />
+                <div className="cat-bracket" style={{ position: "absolute", top: 6, right: 6, width: 12, height: 12, borderTop: "2px solid var(--red)", borderRight: "2px solid var(--red)", opacity: 0 }} />
+                <div className="cat-bracket" style={{ position: "absolute", bottom: 6, left: 6, width: 12, height: 12, borderBottom: "2px solid var(--red)", borderLeft: "2px solid var(--red)", opacity: 0 }} />
+                <div className="cat-bracket" style={{ position: "absolute", bottom: 6, right: 6, width: 12, height: 12, borderBottom: "2px solid var(--red)", borderRight: "2px solid var(--red)", opacity: 0 }} />
+
+                {/* Accent bar draw-in */}
+                <div className="cat-accent" style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "var(--red)", transform: "scaleX(0)", transformOrigin: "left", }} />
+
+                <div style={{ position: "relative" }}>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: "0.55rem", color: "var(--text-dim)", letterSpacing: "2px", marginBottom: "1rem" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </div>
+                  <h3 style={{ fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.5px", marginBottom: "0.4rem", color: "var(--text)" }}>{cat.name}</h3>
+                  <p style={{ fontFamily: "var(--mono)", fontSize: "0.65rem", color: "var(--text-dim)", lineHeight: 1.6, marginBottom: "1rem" }}>{cat.description}</p>
+
+                  <div style={{ marginBottom: "0.6rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: "0.55rem", color: "var(--text-dim)", letterSpacing: "1.5px" }}>TYPES</span>
+                      <span style={{ fontFamily: "var(--mono)", fontSize: "0.58rem", color: "var(--red)", fontWeight: 700 }}>{cat.subcategories.length}</span>
+                    </div>
+                    <div className="data-bar">
+                      <div className="data-bar-fill" style={{ width: `${typePct}%` }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <ArrowRight size={12} color="var(--text-dim)" />
+                  </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════ DIVIDER ══ */}
+      <div style={{
+        position: "relative", height: 130, borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)",
+        backgroundImage: "url(/section-texture.png)", backgroundSize: "cover", backgroundPosition: "center",
+        display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, var(--bg) 0%, transparent 15%, transparent 85%, var(--bg) 100%)" }} />
+        <span style={{ fontFamily: "var(--mono)", fontSize: "0.68rem", letterSpacing: "6px", color: "var(--text)", opacity: 0.7, position: "relative" }}>
+          PERFORMANCE // ENGINEERED
+        </span>
+      </div>
 
       {/* ═══════════════════════════════════════ FEATURED ══ */}
       <section className="mobile-section" style={{ padding: "6rem 1.5rem", borderTop: "1px solid var(--border)", backgroundColor: "var(--bg-panel)" }}>
